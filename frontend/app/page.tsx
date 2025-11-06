@@ -8,7 +8,17 @@ export default function Home() {
       </header>
       <main className="text-center">
         <p className="text-2xl text-gray-600 dark:text-gray-400">
-          Coming Soon
+          Coming soon<br/><br/>
+          Follow us on{" "}
+          <a
+            href="https://x.com/agentscan_"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-black dark:hover:text-white"
+          >
+            X
+          </a>{" "}
+          for launch announcement!
         </p>
       </main>
     </div>
