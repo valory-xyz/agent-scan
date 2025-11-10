@@ -3,7 +3,9 @@ import Image from "next/image";
 import Logo from "./assets/logo.svg";
 import RobotHandshake from "./assets/robot-handshake.svg";
 import TransactionGraph from "./assets/x402-graph.png";
-import Vector from "./components/Vector";
+import GithubLogo from "./components/GithubLogoFooter";
+import TwitterLogo from "./components/TwitterLogoFooter";
+
 import OlasLogo from "./components/OlasLogo";
 
 export default function ComingSoonPage() {
@@ -97,8 +99,20 @@ export default function ComingSoonPage() {
                     data-name="font-awesome-6-brands:x-twitter"
                     data-node-id="20:6210"
                 >
-                    <Vector />
+                    <TwitterLogo />
                 </a>
+                <a
+
+                    href="https://github.com/valory-xyz/agent-scan"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+                    data-name="font-awesome-6-brands:github"
+                    data-node-id="20:6210"
+                >
+                    <GithubLogo />
+                </a>
+
             </div>
         </div>
     );
