@@ -1,0 +1,10 @@
+.topLayer {
+  width: 148px;
+  height: 34px;
+  position: relative;
+  font-size: 35.13px;
+  font-family: Iceland;
+  color: rgba(255, 255, 255, 0.4);
+  text-align: left;
+  display: inline-block;
+}
