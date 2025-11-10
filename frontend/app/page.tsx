@@ -3,7 +3,9 @@ import Image from "next/image";
 import Logo from "./assets/logo.svg";
 import RobotHandshake from "./assets/robot-handshake.svg";
 import TransactionGraph from "./assets/x402-graph.png";
-import Vector from "./components/Vector";
+import GithubLogo from "./components/GithubLogoFooter";
+import TwitterLogo from "./components/TwitterLogoFooter";
+
 import OlasLogo from "./components/OlasLogo";
 
 export default function ComingSoonPage() {
@@ -69,7 +71,7 @@ export default function ComingSoonPage() {
 
                     {/* CTA Button */}
                     <a
-                        href="https://x.com/agentscan_"
+                        href="https://t.me/+_Lx91q1NH0VhZmZk"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="bg-[rgba(204,213,255,0.1)] border border-[rgba(204,213,255,0.05)] px-5 py-2.5 sm:px-6 sm:py-3 md:px-7 md:py-3.5 rounded-2xl hover:bg-[rgba(204,213,255,0.15)] transition-colors cursor-pointer"
@@ -97,8 +99,20 @@ export default function ComingSoonPage() {
                     data-name="font-awesome-6-brands:x-twitter"
                     data-node-id="20:6210"
                 >
-                    <Vector />
+                    <TwitterLogo />
                 </a>
+                <a
+
+                    href="https://github.com/valory-xyz/agent-scan"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="relative w-3.5 h-3.5 sm:w-4 sm:h-4 opacity-50 hover:opacity-100 transition-opacity cursor-pointer"
+                    data-name="font-awesome-6-brands:github"
+                    data-node-id="20:6210"
+                >
+                    <GithubLogo />
+                </a>
+
             </div>
         </div>
     );

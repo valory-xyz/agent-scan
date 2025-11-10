@@ -5,7 +5,15 @@ import styles from './Vector.module.css';
 
 const Vector: NextPage = () => {
     return (
-        <Image className={styles.vectorIcon} src={TwitterLogo} width={14.4} height={13} sizes="100vw" alt="X (Twitter)" />);
+        <Image
+            className={styles.vectorIcon}
+            src={TwitterLogo}
+            width={14.4}
+            height={13}
+            sizes="100vw"
+            alt="X (Twitter)"
+        />
+    );
 };
 
 export default Vector;
