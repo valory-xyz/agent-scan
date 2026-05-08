@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    # Weekly Monday 07:17 UTC. Runs all gates against `main`'s lockfile so
+    # newly-disclosed advisories are caught even on quiet weeks.
+    - cron: '17 7 * * 1'
 
 permissions:
   contents: read
@@ -38,6 +42,13 @@ jobs:
       - run: yarn deps:check-pinned
       - run: yarn lint
       - run: yarn build
+      - name: Generate SBOM (CycloneDX)
+        run: npx --yes @cyclonedx/cdxgen@12.3.3 -t javascript -o sbom.cdx.json .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom
+          path: frontend/sbom.cdx.json
+          retention-days: 90
 
   test:
     name: test (vitest)
