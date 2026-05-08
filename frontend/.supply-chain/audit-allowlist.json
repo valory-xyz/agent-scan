@@ -1,0 +1,13 @@
+{
+  "_doc": "Allowlist for yarn audit high/critical advisories that cannot be fixed in the current branch. Every entry needs a reason and a review date. See SUPPLY-CHAIN-SECURITY.md (lands in PR 3).",
+  "_fields": {
+    "id": "npm advisory numeric ID (from `yarn audit --json` advisory.id)",
+    "ghsa": "GitHub Security Advisory ID, for humans — not used for matching",
+    "package": "package name, for humans",
+    "severity": "advisory severity, for humans",
+    "reason": "why the advisory is allowlisted — upstream has no fix, major version bump deferred, not on a reachable code path, etc.",
+    "added": "YYYY-MM-DD when the entry was added",
+    "review": "YYYY-MM-DD by which the entry must be re-evaluated. An expired entry prints a CI warning but does not fail the job."
+  },
+  "entries": []
+}

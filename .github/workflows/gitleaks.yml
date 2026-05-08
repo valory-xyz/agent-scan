@@ -1,0 +1,57 @@
+name: Gitleaks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Default-deny; only what we need to scan history.
+permissions:
+  contents: read
+
+# Cancel in-flight runs on the same ref when a new push lands.
+concurrency:
+  group: gitleaks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          # Full history so gitleaks can scan every commit, including rewrites.
+          fetch-depth: 0
+
+      - name: Install gitleaks (pinned + checksum-verified)
+        # Using the gitleaks CLI rather than gitleaks/gitleaks-action because the
+        # action's v2+ requires GITLEAKS_LICENSE for private repos in organizations.
+        # The CLI is free and works identically. Tarball downloaded from the
+        # official GitHub release. Pin GITLEAKS_VERSION deliberately; bump in PRs.
+        #
+        # GITLEAKS_SHA256 is the SHA-256 of gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz
+        # from the upstream gitleaks_${GITLEAKS_VERSION}_checksums.txt file. Without
+        # this, a poisoned GitHub release would silently install a backdoored gitleaks
+        # on every CI run. When bumping GITLEAKS_VERSION, update this digest in the
+        # same commit; reviewers should re-fetch the upstream checksum and confirm.
+        env:
+          GITLEAKS_VERSION: '8.30.1'
+          GITLEAKS_SHA256: '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb'
+        run: |
+          set -euo pipefail
+          TARBALL=/tmp/gitleaks.tar.gz
+          curl -sSL -o "$TARBALL" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  ${TARBALL}" | sha256sum -c -
+          tar -xz -C /tmp -f "$TARBALL" gitleaks
+          sudo install -m 0755 /tmp/gitleaks /usr/local/bin/gitleaks
+          gitleaks version
+
+      - name: Detect secrets (full history)
+        # --redact ensures any matched secret is masked in CI logs.
+        # --log-opts="--all" scans every branch + tag, not just HEAD.
+        # --no-banner keeps logs clean.
+        # Exits non-zero on findings, which fails the job and blocks merge
+        # once branch protection requires this check (Tier 4.4).
+        run: gitleaks detect --no-banner --redact --log-opts="--all"

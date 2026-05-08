@@ -1,9 +1,12 @@
 name: CI
 
 on:
+  pull_request:
   push:
     branches: [main]
-  pull_request:
+
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -14,12 +17,13 @@ defaults:
     working-directory: frontend
 
 jobs:
-  lint:
-    name: Lint
+  verify:
+    name: verify (install + deps:check-pinned + lint + build)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: frontend/.nvmrc
           cache: yarn
@@ -28,60 +32,108 @@ jobs:
         run: |
           corepack enable
           corepack prepare yarn@1.22.22 --activate
-          [ "$(yarn --version)" = "1.22.22" ] || { echo "::error::corepack activation failed"; exit 1; }
+          actual="$(yarn --version)"
+          [ "$actual" = "1.22.22" ] || { echo "::error::corepack activation failed (got $actual, expected 1.22.22)"; exit 1; }
       - run: yarn install --frozen-lockfile
+      - run: yarn deps:check-pinned
       - run: yarn lint
+      - run: yarn build
 
   test:
-    name: Test
+    name: test (vitest)
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: frontend/.nvmrc
           cache: yarn
           cache-dependency-path: frontend/yarn.lock
       - name: Activate pinned Yarn via Corepack
         run: |
-          corepack enable
-          corepack prepare yarn@1.22.22 --activate
+          corepack enable && corepack prepare yarn@1.22.22 --activate
           [ "$(yarn --version)" = "1.22.22" ] || { echo "::error::corepack activation failed"; exit 1; }
       - run: yarn install --frozen-lockfile
       - run: yarn test
 
-  build:
-    name: Build
+  audit:
+    name: audit (yarn audit, no install)
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version-file: frontend/.nvmrc
-          cache: yarn
-          cache-dependency-path: frontend/yarn.lock
       - name: Activate pinned Yarn via Corepack
         run: |
-          corepack enable
-          corepack prepare yarn@1.22.22 --activate
+          corepack enable && corepack prepare yarn@1.22.22 --activate
           [ "$(yarn --version)" = "1.22.22" ] || { echo "::error::corepack activation failed"; exit 1; }
-      - run: yarn install --frozen-lockfile
-      - run: yarn build
+      # Intentionally NO `yarn install` here. `yarn audit` reads yarn.lock
+      # directly and queries the registry; skipping install means a
+      # compromised postinstall can't execute inside the very gate that's
+      # checking for compromised dependencies.
+      - run: yarn audit:prod
+
+  install-hooks:
+    name: install-hooks (allowlist drift)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: frontend/.nvmrc
+      - name: Activate pinned Yarn via Corepack
+        run: |
+          corepack enable && corepack prepare yarn@1.22.22 --activate
+          [ "$(yarn --version)" = "1.22.22" ] || { echo "::error::corepack activation failed"; exit 1; }
+      # --ignore-scripts: defense in depth — the gate checking for malicious
+      # install hooks must not itself run any install hook.
+      - run: yarn install --frozen-lockfile --ignore-scripts
+      - run: yarn audit:install-hooks
+
+  lockfile-lint:
+    name: lockfile-lint (registry/hostname validation)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: frontend/.nvmrc
+      - run: npx --yes lockfile-lint --path yarn.lock --type yarn --validate-https --allowed-hosts yarn npm --empty-hostname false
 
   all-checks-passed:
     name: All checks passed
-    needs: [lint, test, build]
+    needs: [verify, test, audit, install-hooks, lockfile-lint]
     if: always()
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write  # needed by the cron-failure step below
+    # Override the workflow-level `working-directory: frontend`. This job
+    # does no checkout, so the frontend/ dir doesn't exist in its workspace —
+    # leaving the inherited default would make bash fail to start.
+    defaults:
+      run:
+        working-directory: .
     steps:
       - name: Verify all required jobs succeeded
-        working-directory: .
         run: |
-          if [[ "${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped') }}" == "true" ]]; then
-            echo "One or more required jobs did not succeed:"
-            echo "  lint:  ${{ needs.lint.result }}"
-            echo "  test:  ${{ needs.test.result }}"
-            echo "  build: ${{ needs.build.result }}"
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] \
+            || [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]] \
+            || [[ "${{ contains(needs.*.result, 'skipped') }}" == "true" ]]; then
+            echo "::error::One or more required jobs did not succeed"
             exit 1
           fi
-          echo "All required jobs succeeded."
