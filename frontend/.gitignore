@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Lockfile guards: this repo uses yarn classic 1.22.x.
+# An accidental npm/pnpm/bun install would create a competing lockfile.
+pnpm-lock.yaml
+package-lock.json
+bun.lockb
+
