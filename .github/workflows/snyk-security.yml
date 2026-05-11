@@ -22,7 +22,29 @@ permissions:
   contents: read
 
 jobs:
+  # Preflight: secrets are not directly accessible in job-level `if:` expressions,
+  # so we check the token via env in a step and surface the result as a job output.
+  # The main `snyk` job below gates on this, which makes the job "skipped" (not
+  # "failed") when SNYK_TOKEN is absent — invisible on the PR's red-check count.
+  check-token:
+    runs-on: ubuntu-latest
+    outputs:
+      has_token: ${{ steps.check.outputs.has_token }}
+    steps:
+      - id: check
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -n "$SNYK_TOKEN" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SNYK_TOKEN repo secret not set — Snyk scan skipped. Add at Settings → Secrets and variables → Actions → SNYK_TOKEN to enable."
+          fi
+
   snyk:
+    needs: check-token
+    if: needs.check-token.outputs.has_token == 'true'
     permissions:
       contents: read              # actions/checkout
       security-events: write      # github/codeql-action/upload-sarif
