@@ -143,6 +143,20 @@ jobs:
       run:
         working-directory: .
     steps:
+      - name: Open issue on cron failure
+        # Fires only on scheduled (cron) runs when something failed. PR and
+        # push failures already surface as red checks on the PR/commit, so
+        # no need to spam issues for those.
+        if: ${{ github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')) }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Weekly supply-chain cron failed (run ${{ github.run_id }})" \
+            --body "The weekly cron in \`.github/workflows/ci.yml\` (\`'17 7 * * 1'\`) failed. Investigate at ${RUN_URL} — most likely cause is a newly-disclosed high/critical advisory or install-hook drift. Address by bumping the dep, adding a Yarn \`resolutions\` entry, or updating \`frontend/.supply-chain/audit-allowlist.json\` / \`install-hooks.allowlist\` per SUPPLY-CHAIN-SECURITY.md §5."
+
       - name: Verify all required jobs succeeded
         run: |
           if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] \
