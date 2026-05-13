@@ -116,6 +116,9 @@ jobs:
 
   all-checks-passed:
     name: All checks passed
+    # NB: gitleaks runs in a separate workflow (.github/workflows/gitleaks.yml).
+    # Cross-workflow `needs:` is not supported, so the gitleaks scan must be
+    # required as its own context in branch protection ("Gitleaks / scan").
     needs: [verify, test, audit, install-hooks, lockfile-lint]
     if: always()
     runs-on: ubuntu-latest

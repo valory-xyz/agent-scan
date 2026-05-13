@@ -63,8 +63,9 @@ function runYarnAudit() {
   });
 }
 
-function parseAdvisories(stdout) {
+function parseAuditOutput(stdout) {
   const advisories = new Map();
+  let sawSummary = false;
   for (const line of stdout.split('\n')) {
     if (!line.trim()) continue;
     let row;
@@ -73,13 +74,17 @@ function parseAdvisories(stdout) {
     } catch {
       continue;
     }
+    if (row.type === 'auditSummary') {
+      sawSummary = true;
+      continue;
+    }
     if (row.type !== 'auditAdvisory') continue;
     const a = row.data.advisory;
     const key = a.id;
     if (!advisories.has(key)) advisories.set(key, { advisory: a, paths: new Set() });
     advisories.get(key).paths.add(row.data.resolution.path);
   }
-  return [...advisories.values()];
+  return { advisories: [...advisories.values()], sawSummary };
 }
 
 const allowlist = loadAllowlist();
@@ -99,7 +104,17 @@ if (!stdout) {
   process.exit(2);
 }
 
-const advisories = parseAdvisories(stdout);
+const { advisories, sawSummary } = parseAuditOutput(stdout);
+
+// `yarn audit --json` always emits an `auditSummary` row when the audit
+// actually completes against the registry. If we got stdout but no summary
+// row, the audit failed silently (e.g. registry transient, network glitch,
+// banner-only output) — treat as a failed gate, not a green pass.
+if (!sawSummary) {
+  console.error('::error::`yarn audit` produced output but no `auditSummary` row — audit likely failed (registry transient or network issue). Refusing to report green.');
+  if (stderr) console.error(stderr);
+  process.exit(2);
+}
 
 const blocking = [];
 const suppressed = [];
