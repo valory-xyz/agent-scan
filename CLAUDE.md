@@ -13,23 +13,21 @@ Next.js 16 (App Router) + React 19 + TypeScript (strict) + Tailwind CSS v4 (via 
 ### Commands (run from `frontend/`)
 
 ```bash
-npm run dev      # next dev — local dev server on :3000
-npm run build    # next build — production build
-npm run start    # next start — serve the production build
-npm run lint     # eslint (flat config in eslint.config.mjs)
+yarn dev      # next dev — local dev server on :3000
+yarn build    # next build — production build
+yarn start    # next start — serve the production build
+yarn lint     # eslint (flat config in eslint.config.mjs)
 ```
 
-There is **no test runner configured**. Don't invent test commands; if tests are needed, set up the toolchain explicitly first.
+### Toolchain pinning
 
-### Package manager note
-
-[frontend/package.json](frontend/package.json) ships with a committed `pnpm-lock.yaml`, but a `yarn.lock` is also present (currently untracked). Stick with **pnpm** for installs to keep the lockfile authoritative; if a contributor switches managers, only one lockfile should remain committed.
+This repo uses **yarn classic 1.22.x exclusively** — `packageManager: yarn@1.22.22` is set in [frontend/package.json](frontend/package.json) and CI activates it via Corepack. Node is pinned to **22.x** via [frontend/.nvmrc](frontend/.nvmrc) + `engines` + `engineStrict: true`; running `yarn install` on a different Node major fails fast. Do not use `npm install` or `pnpm install`; `package-lock.json`, `pnpm-lock.yaml`, and `bun.lockb` are gitignored as a guard.
 
 ## Architecture references
 
 - [README.md](README.md) — components overview (frontend / backend / indexers / data layer).
 - [docs/ArchitectureSpec.pdf](docs/ArchitectureSpec.pdf) — full system design. Read this before designing anything backend-side, since the code does not yet reflect the spec.
-- [.plans/](.plans/) — in-progress design notes (e.g. `supply-chain-update.md`). Treat as scratch, not authoritative.
+- [.plans/](.plans/) — in-progress design notes (e.g. `supply-chain-update.md`). Gitignored as personal scratch.
 
 ## Other
 

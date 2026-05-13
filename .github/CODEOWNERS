@@ -1,7 +1,5 @@
 *                                @LOCKhart07 @mohandast52
 /.github/                        @LOCKhart07 @mohandast52
-/frontend/.supply-chain/         @LOCKhart07 @mohandast52
-/frontend/scripts/               @LOCKhart07 @mohandast52
 /frontend/package.json           @LOCKhart07 @mohandast52
 /frontend/yarn.lock              @LOCKhart07 @mohandast52
 /frontend/.npmrc                 @LOCKhart07 @mohandast52
@@ -9,5 +7,3 @@
 /frontend/next.config.*          @LOCKhart07 @mohandast52
 /frontend/tsconfig.json          @LOCKhart07 @mohandast52
 /SECURITY.md                     @LOCKhart07 @mohandast52
-/SUPPLY-CHAIN-SECURITY.md        @LOCKhart07 @mohandast52
-/CODEOWNERS                      @LOCKhart07 @mohandast52

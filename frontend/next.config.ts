@@ -17,7 +17,6 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   productionBrowserSourceMaps: false,
-  images: { remotePatterns: [] },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
