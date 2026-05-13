@@ -13,10 +13,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "audit:prod": "node scripts/audit.mjs",
+    "audit:install-hooks": "node scripts/audit-install-hooks.mjs",
+    "audit:install-hooks:update": "node scripts/audit-install-hooks.mjs --update",
+    "deps:check-pinned": "node scripts/check-pinned.mjs"
   },
   "dependencies": {
-    "next": "16.0.10",
+    "next": "16.2.6",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
