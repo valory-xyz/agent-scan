@@ -144,10 +144,12 @@ jobs:
         working-directory: .
     steps:
       - name: Open issue on cron failure
-        # Fires only on scheduled (cron) runs when something failed. PR and
-        # push failures already surface as red checks on the PR/commit, so
-        # no need to spam issues for those.
-        if: ${{ github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') || contains(needs.*.result, 'skipped')) }}
+        # Fires only on scheduled (cron) runs when something genuinely failed.
+        # Drops 'skipped' from the condition — concurrency-cancelled runs report
+        # 'skipped' and we don't want to spam issues for those. PR and push
+        # failures already surface as red checks on the PR/commit, so no need
+        # to open issues for those either (hence the `schedule`-only gate).
+        if: ${{ github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
