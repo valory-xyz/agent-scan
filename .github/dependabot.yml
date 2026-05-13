@@ -1,0 +1,35 @@
+version: 2
+# Policy: ALERTS-ONLY. Dependabot must produce zero PRs for this repo.
+#
+#   1. Version-update PRs are suppressed below via
+#      open-pull-requests-limit: 0 on every ecosystem.
+#   2. Security-update PRs are NOT controlled by this file. They are
+#      governed by the repo setting:
+#        Settings -> Code security -> "Dependabot security updates"
+#      That setting MUST BE OFF for the alerts-only policy to hold.
+#   3. Vulnerability ALERTS (Security tab) are also a repo setting:
+#        Settings -> Code security -> "Dependabot alerts"
+#      That setting SHOULD BE ON.
+#
+# Net effect with #2 OFF and #3 ON: zero Dependabot PRs, alerts surface
+# in the Security tab. The versioning-strategy below is harmless under
+# the current policy; it would only matter if security updates are
+# re-enabled at the repo level later.
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    versioning-strategy: increase
+    labels:
+      - dependencies
+      - supply-chain
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 0
+    labels:
+      - github-actions
+      - supply-chain

@@ -19,48 +19,54 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
+          node-version-file: frontend/.nvmrc
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+      - name: Activate pinned Yarn via Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@1.22.22 --activate
+          [ "$(yarn --version)" = "1.22.22" ] || { echo "::error::corepack activation failed"; exit 1; }
+      - run: yarn install --frozen-lockfile
+      - run: yarn lint
 
   test:
     name: Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm test
+          node-version-file: frontend/.nvmrc
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+      - name: Activate pinned Yarn via Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@1.22.22 --activate
+          [ "$(yarn --version)" = "1.22.22" ] || { echo "::error::corepack activation failed"; exit 1; }
+      - run: yarn install --frozen-lockfile
+      - run: yarn test
 
   build:
     name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 11
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+          node-version-file: frontend/.nvmrc
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+      - name: Activate pinned Yarn via Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@1.22.22 --activate
+          [ "$(yarn --version)" = "1.22.22" ] || { echo "::error::corepack activation failed"; exit 1; }
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
 
   all-checks-passed:
     name: All checks passed

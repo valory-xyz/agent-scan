@@ -2,15 +2,6 @@
 
 This document outlines security procedures and general policies for the `agent-scan` project.
 
-## Supported Versions
-
-The following table shows which versions of `agent-scan` are currently being supported with security updates.
-
-| Version | Supported          |
-|---------|--------------------|
-| `n/a`   | :white_check_mark: |
-| `n/a`   | :x:                |
-
 ## Reporting a Vulnerability
 
 The `agent-scan` team and community take all security bugs in `agent-scan` seriously. Thank you for improving the security of `agent-scan`. We appreciate your efforts and responsible disclosure and will make every effort to acknowledge your contributions.
@@ -27,7 +18,7 @@ When the security team receives a security bug report, they will assign it to a 
 
 - Confirm the problem and determine the affected versions.
 - Audit code to find any potential similar problems.
-- Prepare fixes for all releases still under maintenance. These fixes will be released as fast as possible to PyPI.
+- Prepare fixes and ship them as fast as possible via the production deploy.
 
 ## Comments on this Policy
 
