@@ -4,6 +4,10 @@ on:
   pull_request:
   push:
     branches: [main]
+  schedule:
+    # Weekly Monday 07:17 UTC. Runs all gates against `main`'s lockfile so
+    # newly-disclosed advisories are caught even on quiet weeks.
+    - cron: '17 7 * * 1'
 
 permissions:
   contents: read
@@ -38,6 +42,13 @@ jobs:
       - run: yarn deps:check-pinned
       - run: yarn lint
       - run: yarn build
+      - name: Generate SBOM (CycloneDX)
+        run: npx --yes @cyclonedx/cdxgen@12.3.3 -t javascript -o sbom.cdx.json .
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sbom
+          path: frontend/sbom.cdx.json
+          retention-days: 90
 
   test:
     name: test (vitest)
@@ -132,6 +143,22 @@ jobs:
       run:
         working-directory: .
     steps:
+      - name: Open issue on cron failure
+        # Fires only on scheduled (cron) runs when something genuinely failed.
+        # Drops 'skipped' from the condition — concurrency-cancelled runs report
+        # 'skipped' and we don't want to spam issues for those. PR and push
+        # failures already surface as red checks on the PR/commit, so no need
+        # to open issues for those either (hence the `schedule`-only gate).
+        if: ${{ github.event_name == 'schedule' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Weekly supply-chain cron failed (run ${{ github.run_id }})" \
+            --body "The weekly cron in \`.github/workflows/ci.yml\` (\`'17 7 * * 1'\`) failed. Investigate at ${RUN_URL} — most likely cause is a newly-disclosed high/critical advisory or install-hook drift. Address by bumping the dep, adding a Yarn \`resolutions\` entry, or updating \`frontend/.supply-chain/audit-allowlist.json\` / \`install-hooks.allowlist\` per SUPPLY-CHAIN-SECURITY.md §5."
+
       - name: Verify all required jobs succeeded
         run: |
           if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]] \

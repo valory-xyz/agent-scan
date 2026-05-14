@@ -1,0 +1,140 @@
+# Snyk Security
+#
+# Adapted from valory-xyz/autonolas-frontend-mono. Provides a second-opinion
+# scanner alongside the in-tree `audit:prod` gate (PR 2 / SUPPLY-CHAIN-SECURITY.md §5).
+#
+# Two scans, both non-blocking by design (continue-on-error: true) so a
+# transient Snyk outage doesn't block merges:
+#   - `snyk code test` — SAST. Results uploaded to GitHub Code Scanning (Security tab).
+#   - `snyk monitor`   — dependency posture snapshot in the Snyk dashboard.
+#
+# Requires repo secret SNYK_TOKEN (Settings → Secrets and variables → Actions).
+# Until that secret is set, `snyk auth` fails fast with a clear error.
+
+name: Snyk Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # Preflight: secrets are not directly accessible in job-level `if:` expressions,
+  # so we check the token via env in a step and surface the result as a job output.
+  # The main `snyk` job below gates on this, which makes the job "skipped" (not
+  # "failed") when SNYK_TOKEN is absent — invisible on the PR's red-check count.
+  check-token:
+    runs-on: ubuntu-latest
+    outputs:
+      has_token: ${{ steps.check.outputs.has_token }}
+    steps:
+      - id: check
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          if [ -n "$SNYK_TOKEN" ]; then
+            echo "has_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_token=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SNYK_TOKEN repo secret not set — Snyk scan skipped. Add at Settings → Secrets and variables → Actions → SNYK_TOKEN to enable."
+          fi
+
+  snyk:
+    needs: check-token
+    if: needs.check-token.outputs.has_token == 'true'
+    permissions:
+      contents: read              # actions/checkout
+      security-events: write      # github/codeql-action/upload-sarif
+      actions: read               # required for private repos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    # NOTE: SNYK_TOKEN is deliberately NOT exported at job level. Exporting it
+    # job-wide makes it available during `yarn install`, where a compromised
+    # postinstall script in any production or dev dependency could read it.
+    # Scope it to the Snyk steps only — see SUPPLY-CHAIN-SECURITY.md §7.
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: yarn
+          cache-dependency-path: frontend/yarn.lock
+
+      - name: Activate pinned Yarn via Corepack
+        run: |
+          corepack enable && corepack prepare yarn@1.22.22 --activate
+          [ "$(yarn --version)" = "1.22.22" ] || { echo "::error::corepack activation failed"; exit 1; }
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Setup Snyk CLI
+        uses: snyk/actions/setup@9cf6ca713d71123d2d229cc3d7f145b96ea3c518 # master
+
+      - name: Verify Snyk authentication
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          snyk auth "$SNYK_TOKEN" || {
+            echo "::error::Snyk authentication failed. Confirm SNYK_TOKEN is set in repo secrets and the project is enabled in the Valory Snyk org."
+            exit 1
+          }
+
+      # SAST scan (Snyk Code). The org UUID below is the Valory-shared Snyk
+      # organization (matches autonolas-frontend-mono / townhall-kpis); confirm
+      # before merging if this repo is enabled there.
+      - name: Snyk Code test (SAST)
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        # Use --sarif-file-output= (Snyk's first-class flag) instead of
+        # `--sarif > file 2>&1`. The shell-redirect form folds stderr into
+        # the SARIF file; any auth notice, telemetry warning, or deprecation
+        # banner written to stderr corrupts the JSON and silently breaks
+        # SARIF upload to GitHub Code Scanning.
+        run: snyk code test --org=00508cff-0e2b-4bb5-aaf0-9fa7cc430473 --sarif-file-output=snyk-code.sarif || true
+        continue-on-error: true
+
+      # Dependency posture snapshot in Snyk dashboard.
+      - name: Snyk Open Source monitor
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        run: |
+          snyk monitor --org=00508cff-0e2b-4bb5-aaf0-9fa7cc430473 --file=package.json --project-name="agent-scan-frontend" || true
+        continue-on-error: true
+
+      - name: Validate SARIF output
+        id: validate_sarif
+        run: |
+          if [ -f snyk-code.sarif ] && [ -s snyk-code.sarif ]; then
+            if head -c 1 snyk-code.sarif | grep -q '^{'; then
+              if grep -q '"runs": *\[\]' snyk-code.sarif || ! grep -q '"results"' snyk-code.sarif; then
+                echo "SARIF has no findings; skipping upload."
+                echo "sarif_valid=false" >> $GITHUB_OUTPUT
+              else
+                echo "sarif_valid=true" >> $GITHUB_OUTPUT
+              fi
+            else
+              echo "::warning::SARIF is not valid JSON; skipping upload."
+              echo "sarif_valid=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "SARIF missing or empty; skipping upload."
+            echo "sarif_valid=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload SARIF to GitHub Code Scanning
+        if: steps.validate_sarif.outputs.sarif_valid == 'true'
+        uses: github/codeql-action/upload-sarif@7fd177fa680c9881b53cdab4d346d32574c9f7f4 # v3
+        with:
+          sarif_file: frontend/snyk-code.sarif

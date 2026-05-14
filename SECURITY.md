@@ -12,6 +12,8 @@ The lead maintainer will acknowledge your email within 48 hours, and will send a
 
 Report security bugs in third-party modules to the person or team maintaining the module.
 
+For **suspected supply-chain compromises** (e.g., a malicious version of an npm dependency we use, rather than a vulnerability in our own code), see [SUPPLY-CHAIN-SECURITY.md](SUPPLY-CHAIN-SECURITY.md) for the threat model, active controls, and response playbook. Use the same disclosure email above.
+
 ## Disclosure Policy
 
 When the security team receives a security bug report, they will assign it to a primary handler. This person will coordinate the fix and release process, involving the following steps:
