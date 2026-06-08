@@ -17,7 +17,9 @@
     "audit:prod": "node scripts/audit.mjs",
     "audit:install-hooks": "node scripts/audit-install-hooks.mjs",
     "audit:install-hooks:update": "node scripts/audit-install-hooks.mjs --update",
-    "deps:check-pinned": "node scripts/check-pinned.mjs"
+    "deps:check-pinned": "node scripts/check-pinned.mjs",
+    "license-check": "node scripts/license-check.mjs",
+    "license-check:test": "node --test scripts/license-check.test.mjs"
   },
   "dependencies": {
     "next": "16.2.6",
@@ -25,6 +27,7 @@
     "react-dom": "19.2.0"
   },
   "devDependencies": {
+    "license-checker-rseidelsohn": "4.4.2",
     "typescript": "5.9.3",
     "@types/node": "20.19.40",
     "@types/react": "19.2.14",
