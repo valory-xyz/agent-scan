@@ -132,7 +132,7 @@ jobs:
     # or be a reasoned exemption.
     # NON-BLOCKING PILOT: deliberately NOT in `all-checks-passed.needs` below, so
     # it reports without gating merges. Promote to required by adding it to that
-    # `needs:` array (+ branch protection). See .plans/license-check-gate.md.
+    # `needs:` array (+ branch protection). See SUPPLY-CHAIN-SECURITY.md §5.
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -144,7 +144,12 @@ jobs:
         with:
           node-version-file: frontend/.nvmrc
       - name: Activate pinned Yarn via Corepack
-        run: corepack enable && corepack prepare yarn@1.22.22 --activate
+        run: |
+          corepack enable && corepack prepare yarn@1.22.22 --activate
+          [ "$(yarn --version)" = "1.22.22" ] || { echo "::error::corepack activation failed"; exit 1; }
+      # Unit-test the pure SPDX evaluator first — no node_modules needed, so it
+      # fails fast on a logic regression before the (slower) install + tree scan.
+      - run: yarn license-check:test
       - run: yarn install --frozen-lockfile
       - run: yarn license-check
 
